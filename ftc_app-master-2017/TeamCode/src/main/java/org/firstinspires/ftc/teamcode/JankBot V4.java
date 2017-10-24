@@ -105,8 +105,6 @@ public class TeleOpV4 extends OpMode
         double backLeftPower = 0;
         double backRightPower = 0;
         double liftPower = 0;
-        int dir_y = 0;
-        int dir_x = 0;
 
         if (buttonTracker == false && gamepad1.right_stick_button == true || gamepad1.left_stick_button == true)
         {
@@ -115,190 +113,43 @@ public class TeleOpV4 extends OpMode
         buttonTracker = gamepad1.left_stick_button || gamepad1.right_stick_button;
 
         double power = limit(0, 1, speedCoef * Math.sqrt(gamepad1.left_stick_x * gamepad1.left_stick_x + gamepad1.left_stick_y * gamepad1.left_stick_y));
+        double target_angle;
 
-        if (gamepad1.left_stick_y < 0)
-        {
-            dir_y = 1;
-        }
-        else if (gamepad1.left_stick_y > 0)
-        {
-            dir_y = -1;
-        }
-        if (gamepad1.left_stick_x < 0)
-        {
-            dir_x = -1;
-        }
-        else if (gamepad1.left_stick_x > 0)
-        {
-            dir_x = 1;
-        }
 
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         // Uses left stick to control the left wheels, and the right stick to control the right wheels
-        if (angles.firstAngle >= -45 && angles.firstAngle <= 45)
+
+        if (gamepad1.left_stick_x == 0)
         {
-            direction = 'F';
-        }
-        else if (angles.firstAngle < -45 && angles.firstAngle > -135)
-        {
-            direction = 'R';
-        }
-        else if (angles.firstAngle >= 135 || angles.firstAngle <= -135)
-        {
-            direction = 'B';
+            if (-gamepad1.left_stick_y > 0)
+            {
+                target_angle = 0;
+            }
+            else
+            {
+                target_angle = 180;
+            }
         }
         else
         {
-            direction = 'L';
+            target_angle = Math.atan(-gamepad1.left_stick_y / Math.abs(gamepad1.left_stick_x)) * 180 / Math.PI;
+            if (gamepad1.left_stick_x > 0)
+            {
+                target_angle -= 90;
+            }
+            else
+            {
+                target_angle = -target_angle + 90;
+            }
         }
 
-        switch (direction)
-        {
-            case 'F':
-                if (gamepad1.left_stick_x >= -0.2 && gamepad1.left_stick_x <= 0.2)
-                {
-                    frontLeftPower = power * dir_y;
-                    backLeftPower = power * dir_y;
-                    frontRightPower = power * dir_y;
-                    backRightPower = power * dir_y;
-                }
-                else if (gamepad1.left_stick_y >= -0.2 && gamepad1.left_stick_y <= 0.2)
-                {
-                    frontLeftPower = power * dir_x;
-                    backLeftPower = -power * dir_x;
-                    frontRightPower = -power * dir_x;
-                    backRightPower = power * dir_x;
-                }
-                else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y < -0.2)
-                {
-                    backLeftPower = power;
-                    frontRightPower = power;
-                }
-                else if (gamepad1.left_stick_x > 0.2 && gamepad1.left_stick_y < -0.2)
-                {
-                    frontLeftPower = power;
-                    backRightPower = power;
-                }
-                else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y > 0.2)
-                {
-                    frontLeftPower = -power;
-                    backRightPower = -power;
-                }
-                else
-                {
-                    frontRightPower = -power;
-                    backLeftPower = -power;
-                }
-                break;
-            case 'L':
-                if (gamepad1.left_stick_x >= -0.2 && gamepad1.left_stick_x <= 0.2)
-                {
-                    frontLeftPower = -power * dir_y;
-                    backLeftPower = power * dir_y;
-                    frontRightPower = power * dir_y;
-                    backRightPower = -power * dir_y;
-                }
-                else if (gamepad1.left_stick_y >= -0.2 && gamepad1.left_stick_y <= 0.2)
-                {
-                    frontLeftPower = power * dir_x;
-                    backLeftPower = power * dir_x;
-                    frontRightPower = power * dir_x;
-                    backRightPower = power * dir_x;
-                }
-                else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y < -0.2)
-                {
-                    backRightPower = power;
-                    frontLeftPower = power;
-                }
-                else if (gamepad1.left_stick_x > 0.2 && gamepad1.left_stick_y < -0.2)
-                {
-                    frontRightPower = -power;
-                    backLeftPower = -power;
-                }
-                else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y > 0.2)
-                {
-                    frontRightPower = power;
-                    backLeftPower = power;
-                }
-                else
-                {
-                    frontLeftPower = -power;
-                    backRightPower = -power;
-                }
-                break;
-            case 'B':
-                if (gamepad1.left_stick_x >= -0.2 && gamepad1.left_stick_x <= 0.2)
-                {
-                    frontLeftPower = -power * dir_y;
-                    backLeftPower = -power * dir_y;
-                    frontRightPower = -power * dir_y;
-                    backRightPower = -power * dir_y;
-                }
-                else if (gamepad1.left_stick_y >= -0.2 && gamepad1.left_stick_y <= 0.2)
-                {
-                    frontLeftPower = -power * dir_x;
-                    backLeftPower = power * dir_x;
-                    frontRightPower = power * dir_x;
-                    backRightPower = -power * dir_x;
-                }
-                else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y < -0.2)
-                {
-                    backLeftPower = -power;
-                    frontRightPower = -power;
-                }
-                else if (gamepad1.left_stick_x > 0.2 && gamepad1.left_stick_y < -0.2)
-                {
-                    frontLeftPower = -power;
-                    backRightPower = -power;
-                }
-                else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y > 0.2)
-                {
-                    frontLeftPower = power;
-                    backRightPower = power;
-                }
-                else
-                {
-                    frontRightPower = power;
-                    backLeftPower = power;
-                }
-                break;
-            case 'R':
-                if (gamepad1.left_stick_x >= -0.2 && gamepad1.left_stick_x <= 0.2)
-                {
-                    frontLeftPower = -power * dir_y;
-                    backLeftPower = power * dir_y;
-                    frontRightPower = power * dir_y;
-                    backRightPower = -power * dir_y;
-                }
-                else if (gamepad1.left_stick_y >= -0.2 && gamepad1.left_stick_y <= 0.2)
-                {
-                    frontLeftPower = power * dir_x;
-                    backLeftPower = power * dir_x;
-                    frontRightPower = power * dir_x;
-                    backRightPower = power * dir_x;
-                }
-                else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y < -0.2)
-                {
-                    backRightPower = -power;
-                    frontLeftPower = -power;
-                }
-                else if (gamepad1.left_stick_x > 0.2 && gamepad1.left_stick_y < -0.2)
-                {
-                    frontRightPower = power;
-                    backLeftPower = power;
-                }
-                else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y > 0.2)
-                {
-                    frontRightPower = -power;
-                    backLeftPower = -power;
-                }
-                else
-                {
-                    frontLeftPower = power;
-                    backRightPower = power;
-                }
-        }
+        target_angle -= angles.firstAngle;
+
+        frontLeftPower = limit(-1, 1, (-Math.sqrt(2) * Math.sin(Math.PI * target_angle / 180 - Math.PI * 45 / 180)) * power * speedCoef);
+        backRightPower = limit(-1, 1, (-Math.sqrt(2) * Math.sin(Math.PI * target_angle / 180 - Math.PI * 45 / 180)) * power * speedCoef);
+        frontRightPower = limit(-1, 1, (-Math.sqrt(2) * Math.sin(Math.PI * target_angle / 180 - Math.PI * 135 / 180)) * power * speedCoef);
+        backLeftPower = limit(-1, 1, (-Math.sqrt(2) * Math.sin(Math.PI * target_angle / 180 - Math.PI * 135 / 180)) * power * speedCoef);
 
         if (gamepad1.right_stick_x > 0.2 || gamepad1.right_stick_x < -0.2)
         {
@@ -355,8 +206,9 @@ public class TeleOpV4 extends OpMode
         telemetry.addData("Status", "Run Time: " + runtime.toString());
         telemetry.addData("Servo Angles: ", "Top Left: " + topLeftServo.getPosition() + "\nBottom Left: " + bottomLeftServo.getPosition() + "\nTop Right: " + topRightServo.getPosition() + "\nBottom Right: " + bottomRightServo.getPosition());
         telemetry.addData("Speed: ", (speedCoef == 1.0) ? "Fast" : "Slow");
-        telemetry.addData("Angle: ", angles.firstAngle);
-        telemetry.addData("Direction: ", direction);
+        //telemetry.addData("Angle: ", angles.firstAngle);
+        telemetry.addData("Direction: ", target_angle);
+        telemetry.addData("Power: ", power);
     }
 
     /*

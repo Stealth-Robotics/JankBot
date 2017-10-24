@@ -190,17 +190,17 @@ public class TeleOpV3 extends OpMode
             case 'L':
                 if (gamepad1.left_stick_x >= -0.2 && gamepad1.left_stick_x <= 0.2)
                 {
-                    frontLeftPower = power * dir_y;
-                    backLeftPower = -power * dir_y;
-                    frontRightPower = -power * dir_y;
-                    backRightPower = power * dir_y;
+                    frontLeftPower = -power * dir_y;
+                    backLeftPower = power * dir_y;
+                    frontRightPower = power * dir_y;
+                    backRightPower = -power * dir_y;
                 }
                 else if (gamepad1.left_stick_y >= -0.2 && gamepad1.left_stick_y <= 0.2)
                 {
-                    frontLeftPower = -power * dir_x;
-                    backLeftPower = -power * dir_x;
-                    frontRightPower = -power * dir_x;
-                    backRightPower = -power * dir_x;
+                    frontLeftPower = power * dir_x;
+                    backLeftPower = power * dir_x;
+                    frontRightPower = power * dir_x;
+                    backRightPower = power * dir_x;
                 }
                 else if (gamepad1.left_stick_x < -0.2 && gamepad1.left_stick_y < -0.2)
                 {
