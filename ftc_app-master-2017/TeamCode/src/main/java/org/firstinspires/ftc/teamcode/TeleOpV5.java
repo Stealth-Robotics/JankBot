@@ -113,7 +113,7 @@ public class TeleOpV5 extends OpMode
 
         if (buttonTracker == false && gamepad1.right_stick_button == true || gamepad1.left_stick_button == true)
         {
-            speedCoef = (speedCoef == 1.0) ? 0.4 : 1.0;
+            speedCoef = (speedCoef == 1.0) ? 0.25 : 1.0;
         }
         buttonTracker = gamepad1.left_stick_button || gamepad1.right_stick_button;
 
