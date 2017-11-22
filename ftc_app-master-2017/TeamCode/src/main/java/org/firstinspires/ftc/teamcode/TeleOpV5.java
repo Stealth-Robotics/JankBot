@@ -72,6 +72,11 @@ public class TeleOpV5 extends OpMode
         bottomRightServo.setDirection(Servo.Direction.FORWARD);
         arm.setDirection(Servo.Direction.FORWARD);
 
+        frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         //Getting the IMU
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
@@ -113,11 +118,11 @@ public class TeleOpV5 extends OpMode
 
         if (buttonTracker == false && gamepad1.right_stick_button == true || gamepad1.left_stick_button == true)
         {
-            speedCoef = (speedCoef == 1.0) ? 0.25 : 1.0;
+            speedCoef = (speedCoef == 1.0) ? 0.5 : 1.0;
         }
         buttonTracker = gamepad1.left_stick_button || gamepad1.right_stick_button;
 
-        double power = limit(0, 1, speedCoef * Math.sqrt(gamepad1.left_stick_x * gamepad1.left_stick_x + gamepad1.left_stick_y * gamepad1.left_stick_y));
+        double power = limit(0, 1, Math.sqrt(gamepad1.left_stick_x * gamepad1.left_stick_x + gamepad1.left_stick_y * gamepad1.left_stick_y));
         double target_angle;
 
 
@@ -156,14 +161,6 @@ public class TeleOpV5 extends OpMode
 
         target_angle -= angles.firstAngle - angleAdjust;
 
-        if (target_angle > 180)
-        {
-            target_angle -= 360;
-        }
-        else if (target_angle < -180)
-        {
-            target_angle += 360;
-        }
 
         double power1 = -Math.sqrt(2) * Math.sin(Math.PI * target_angle / 180 - Math.PI * 45 / 180);
         double power2 = -Math.sqrt(2) * Math.sin(Math.PI * target_angle / 180 - Math.PI * 135 / 180);
@@ -178,10 +175,10 @@ public class TeleOpV5 extends OpMode
 
         if (gamepad1.right_stick_x > 0.2 || gamepad1.right_stick_x < -0.2)
         {
-            frontLeftPower += gamepad1.right_stick_x * speedCoef * speedCoef;
-            backLeftPower += gamepad1.right_stick_x * speedCoef * speedCoef;
-            frontRightPower += -gamepad1.right_stick_x * speedCoef * speedCoef;
-            backRightPower += -gamepad1.right_stick_x * speedCoef * speedCoef;
+            frontLeftPower += gamepad1.right_stick_x * speedCoef;
+            backLeftPower += gamepad1.right_stick_x * speedCoef;
+            frontRightPower += -gamepad1.right_stick_x * speedCoef;
+            backRightPower += -gamepad1.right_stick_x * speedCoef;
         }
 
         double maxPower;
@@ -202,10 +199,13 @@ public class TeleOpV5 extends OpMode
             maxPower = Math.abs(backRightPower);
         }
 
-        frontLeftPower /= maxPower;
-        backLeftPower /= maxPower;
-        frontRightPower /= maxPower;
-        backRightPower /= maxPower;
+        if (maxPower >= 1)
+        {
+            frontLeftPower /= maxPower;
+            backLeftPower /= maxPower;
+            frontRightPower /= maxPower;
+            backRightPower /= maxPower;
+        }
 
         if (gamepad2.left_stick_y < -0.2 && upperLimit.getState())
         {
