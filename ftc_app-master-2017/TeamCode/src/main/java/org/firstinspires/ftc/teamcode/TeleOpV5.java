@@ -20,24 +20,36 @@ import com.qualcomm.robotcore.hardware.DigitalChannel;
 public class TeleOpV5 extends OpMode
 {
     // Declare OpMode members.
+
+    //the timer
     private ElapsedTime runtime = new ElapsedTime();
+    //wheel motors
     private DcMotor frontLeftMotor = null;
     private DcMotor frontRightMotor = null;
     private DcMotor backLeftMotor = null;
     private DcMotor backRightMotor = null;
+    //claw lift motor
     private DcMotor liftMotor = null;
+    //claw servos
     private Servo topLeftServo = null;
     private Servo bottomLeftServo = null;
     private Servo topRightServo = null;
     private Servo bottomRightServo = null;
+    //jewel arm servo
     private Servo arm = null;
+    //limit switches
     private DigitalChannel lowerLimit = null;
     private DigitalChannel upperLimit = null;
+    //speed mode tracker
     private double speedCoef = 1.0;
+    //tracks the stick button for the speedmodes
     private boolean buttonTracker = false;
+    //the gyroscope
     private BNO055IMU imu = null;
+    //variable to get the gyroscope
     private Orientation angles = null;
-    private double angleAdjust = 0;
+    //thing to help the user adjust 'forward' when the opmode is running
+    public static double angleAdjust;
     /*
      * Code to run ONCE when the driver hits INIT
      */
@@ -71,11 +83,6 @@ public class TeleOpV5 extends OpMode
         topRightServo.setDirection(Servo.Direction.FORWARD);
         bottomRightServo.setDirection(Servo.Direction.FORWARD);
         arm.setDirection(Servo.Direction.FORWARD);
-
-        frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         //Getting the IMU
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
@@ -207,17 +214,9 @@ public class TeleOpV5 extends OpMode
             backRightPower /= maxPower;
         }
 
-        if (gamepad2.left_stick_y < -0.2 && upperLimit.getState())
+        if (gamepad2.left_stick_y < 0 && upperLimit.getState() || gamepad2.left_stick_y > 0 && lowerLimit.getState())
         {
-            liftPower = 1;
-        }
-        else if (gamepad2.left_stick_y > 0.2 && lowerLimit.getState())
-        {
-            liftPower = -1;
-        }
-        else
-        {
-            liftPower = 0;
+            liftPower = -gamepad2.left_stick_y;
         }
 
         topLeftServo.setPosition(0.85 - gamepad2.right_trigger / (1.5385)); //between 0.85 and 0.2
@@ -231,13 +230,14 @@ public class TeleOpV5 extends OpMode
         backLeftMotor.setPower(backLeftPower);
         backRightMotor.setPower(backRightPower);
         liftMotor.setPower(liftPower);
-        arm.setPosition(gamepad1.right_trigger / 2.7);
+        arm.setPosition(gamepad1.right_trigger / 2 + 0.3);
 
         // Show the elapsed game time and wheel power.
         telemetry.addData("Status", "Run Time: " + runtime.toString());
         telemetry.addData("Speed: ", (speedCoef == 1.0) ? "Fast" : "Slow");
         telemetry.addData("Top Claw: ", (topLeftServo.getPosition() > 0.4) ? "Open" : "Closed");
         telemetry.addData("Bottom Claw: ", (bottomLeftServo.getPosition() > 0.4) ? "Open" : "Closed");
+        telemetry.addData("Angle Adjust: ", angleAdjust);
     }
 
     /*
