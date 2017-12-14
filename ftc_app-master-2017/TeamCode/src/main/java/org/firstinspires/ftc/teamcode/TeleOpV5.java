@@ -59,37 +59,47 @@ public class TeleOpV5 extends OpMode
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
+        //the motor variables
         frontLeftMotor  = hardwareMap.dcMotor.get("front_left_drive");
         frontRightMotor = hardwareMap.dcMotor.get("front_right_drive");
         backLeftMotor  = hardwareMap.dcMotor.get("back_left_drive");
         backRightMotor = hardwareMap.dcMotor.get("back_right_drive");
+        //the lift motors and servos
         liftMotor = hardwareMap.dcMotor.get("grab_lift");
         topLeftServo = hardwareMap.servo.get("top_left");
         bottomLeftServo = hardwareMap.servo.get("bottom_left");
         topRightServo = hardwareMap.servo.get("top_right");
         bottomRightServo = hardwareMap.servo.get("bottom_right");
+        //the jewel arm
         arm = hardwareMap.servo.get("back_servo");
+        //the lift limit switches
         lowerLimit = hardwareMap.digitalChannel.get("lower_limit");
         upperLimit = hardwareMap.digitalChannel.get("upper_limit");
         // Most robots need the motor on one side to be reversed to drive forward
-        // Reverse the motor that runs backwards when connected directly to the battery
-        frontLeftMotor.setDirection(DcMotor.Direction.REVERSE); // Set to REVERSE if using AndyMark motors
-        frontRightMotor.setDirection(DcMotor.Direction.FORWARD);// Set to FORWARD if using AndyMark motors
-        backLeftMotor.setDirection(DcMotor.Direction.REVERSE); // Set to REVERSE if using AndyMark motors
-        backRightMotor.setDirection(DcMotor.Direction.FORWARD);// Set to FORWARD if using AndyMark motors
+        //setting the motor directions
+        //left wheels go in reverse, right wheels go forward
+        frontLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+        frontRightMotor.setDirection(DcMotor.Direction.FORWARD);
+        backLeftMotor.setDirection(DcMotor.Direction.REVERSE);
+        backRightMotor.setDirection(DcMotor.Direction.FORWARD);
+        //lift motor gets reversed
         liftMotor.setDirection(DcMotor.Direction.REVERSE);
+        //left servos get reversed, right servos go forward
         topLeftServo.setDirection(Servo.Direction.REVERSE);
         bottomLeftServo.setDirection(Servo.Direction.REVERSE);
         topRightServo.setDirection(Servo.Direction.FORWARD);
         bottomRightServo.setDirection(Servo.Direction.FORWARD);
+        //jewel arm goes forward
         arm.setDirection(Servo.Direction.FORWARD);
 
-        //Getting the IMU
+        //Getting the inertial measurement unit
+        //setting the parameters for the imu
         BNO055IMU.Parameters parameters = new BNO055IMU.Parameters();
         parameters.angleUnit = BNO055IMU.AngleUnit.DEGREES;
         parameters.accelUnit = BNO055IMU.AccelUnit.METERS_PERSEC_PERSEC;
         imu = hardwareMap.get(BNO055IMU.class, "imu");
         imu.initialize(parameters);
+        //the imu's orientation
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
 
         // Tell the driver that initialization is complete.
@@ -99,6 +109,7 @@ public class TeleOpV5 extends OpMode
     /*
      * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
      */
+    //not used right now
     @Override
     public void init_loop() {
     }
@@ -116,31 +127,36 @@ public class TeleOpV5 extends OpMode
      */
     @Override
     public void loop() {
-        // Setup a variable for each drive wheel to save power level for telemetry
+        // Setup a variable for each drive wheel to save power level
         double frontLeftPower = 0;
         double frontRightPower = 0;
         double backLeftPower = 0;
         double backRightPower = 0;
         double liftPower = 0;
 
-        if (buttonTracker == false && gamepad1.right_stick_button == true || gamepad1.left_stick_button == true)
+        //toggles between full speed and slow speed
+        //driver clicks one of the joysticks to change modes
+        //change the number that is not 1.0 to change the speed of slow speed
+        if (!buttonTracker && (gamepad1.right_stick_button || gamepad1.left_stick_button))
         {
             speedCoef = (speedCoef == 1.0) ? 0.5 : 1.0;
         }
         buttonTracker = gamepad1.left_stick_button || gamepad1.right_stick_button;
 
+        //finds distance from center of gamepad to current joystick position
         double power = limit(0, 1, Math.sqrt(gamepad1.left_stick_x * gamepad1.left_stick_x + gamepad1.left_stick_y * gamepad1.left_stick_y));
         double target_angle;
 
-
+        //gets the orientation from the imu
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        //driver can press 'a' in order to 'reset' the direction the robot considers to be the front
         if (gamepad1.a)
         {
             angleAdjust = angles.firstAngle;
         }
 
-        // Uses left stick to control the left wheels, and the right stick to control the right wheels
 
+        //determine angle the driver wants to move in using left stick
         if (gamepad1.left_stick_x == 0)
         {
             if (-gamepad1.left_stick_y >= 0)
@@ -157,6 +173,8 @@ public class TeleOpV5 extends OpMode
             target_angle = Math.atan(-gamepad1.left_stick_y / Math.abs(gamepad1.left_stick_x)) * 180 / Math.PI;
         }
 
+        //adjusting the angle system so that 0 degrees is in the front in order to align with the imu's system
+        //also allows for moving to the left, as the tangent funtion has the range -90 < y < 90
         if (gamepad1.left_stick_x > 0)
         {
             target_angle -= 90;
@@ -166,20 +184,25 @@ public class TeleOpV5 extends OpMode
             target_angle = -target_angle + 90;
         }
 
+        //does the math to adjust the front
         target_angle -= angles.firstAngle - angleAdjust;
 
-
+        //calculates the necessary power for the top left and back right wheels
         double power1 = -Math.sqrt(2) * Math.sin(Math.PI * target_angle / 180 - Math.PI * 45 / 180);
+        //calculates the necessary power for the top right and back left wheels
         double power2 = -Math.sqrt(2) * Math.sin(Math.PI * target_angle / 180 - Math.PI * 135 / 180);
 
+        //makes sure that both function are within the domain -1 <= x <= 1, while keeping the signs and ratios the same
         power1 = (Math.abs(power1) > Math.abs(power2)) ? Math.abs(power1) / power1 : power1 / Math.abs(power2);
         power2 = (Math.abs(power1) > Math.abs(power2)) ? power2 / Math.abs(power1) : Math.abs(power2) / power2;
 
+        //sets the variables for the motors to the right power, using the numbers for the direction, speed, and speed mode
         frontLeftPower = limit(-1, 1, power1 * power * speedCoef);
         backRightPower = limit(-1, 1, power1 * power * speedCoef);
         frontRightPower = limit(-1, 1, power2 * power * speedCoef);
         backLeftPower = limit(-1, 1, power2 * power * speedCoef);
 
+        //rotates the robot using the driver's right stick
         if (gamepad1.right_stick_x > 0.2 || gamepad1.right_stick_x < -0.2)
         {
             frontLeftPower += gamepad1.right_stick_x * speedCoef;
@@ -188,6 +211,7 @@ public class TeleOpV5 extends OpMode
             backRightPower += -gamepad1.right_stick_x * speedCoef;
         }
 
+        //makes sure the motor power are in the domain -1 <= x <= 1, keeping signs and ratios the same
         double maxPower;
         if (frontLeftPower > frontRightPower && frontLeftPower > backLeftPower && frontLeftPower > backRightPower)
         {
@@ -214,11 +238,13 @@ public class TeleOpV5 extends OpMode
             backRightPower /= maxPower;
         }
 
+        //moving the lift motor, using the claw operator's left stick and the limit swithes
         if (gamepad2.left_stick_y < 0 && upperLimit.getState() || gamepad2.left_stick_y > 0 && lowerLimit.getState())
         {
             liftPower = -gamepad2.left_stick_y;
         }
 
+        //opens and closes the claw using the right trigger for the upper claw, and the left trigger for the lower claw
         topLeftServo.setPosition(0.85 - gamepad2.right_trigger / (1.5385)); //between 0.85 and 0.2
         topRightServo.setPosition(0.8 - gamepad2.right_trigger / (1.6667)); //between 0.8 and 0.2
         bottomLeftServo.setPosition(0.7 - gamepad2.left_trigger /  (1.8182)); //between 0.7 and 0.15
@@ -230,14 +256,15 @@ public class TeleOpV5 extends OpMode
         backLeftMotor.setPower(backLeftPower);
         backRightMotor.setPower(backRightPower);
         liftMotor.setPower(liftPower);
+
+        //the jewel knocker, unnecessary for teleop
         arm.setPosition(gamepad1.right_trigger / 2 + 0.3);
 
-        // Show the elapsed game time and wheel power.
+        // Show the elapsed game time, speed mode, and claw positions
         telemetry.addData("Status", "Run Time: " + runtime.toString());
         telemetry.addData("Speed: ", (speedCoef == 1.0) ? "Fast" : "Slow");
         telemetry.addData("Top Claw: ", (topLeftServo.getPosition() > 0.4) ? "Open" : "Closed");
         telemetry.addData("Bottom Claw: ", (bottomLeftServo.getPosition() > 0.4) ? "Open" : "Closed");
-        telemetry.addData("Angle Adjust: ", angleAdjust);
     }
 
     /*
