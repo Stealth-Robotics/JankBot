@@ -35,6 +35,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @Autonomous(name="AutoV2RED_RIGHT", group="Linear Opmode")
+@Disabled
 
 public class AutoV2RED_RIGHT extends LinearOpMode {
 
@@ -95,12 +96,18 @@ public class AutoV2RED_RIGHT extends LinearOpMode {
         frontRightMotor.setDirection(DcMotor.Direction.FORWARD);// Set to FORWARD if using AndyMark motors
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE); // Set to REVERSE if using AndyMark motors
         backRightMotor.setDirection(DcMotor.Direction.FORWARD);// Set to FORWARD if using AndyMark motors
+
         arm.setDirection(Servo.Direction.FORWARD);
         liftMotor.setDirection(DcMotor.Direction.REVERSE);
-        topLeftServo.setDirection(Servo.Direction.FORWARD);
-        bottomLeftServo.setDirection(Servo.Direction.FORWARD);
-        topRightServo.setDirection(Servo.Direction.REVERSE);
-        bottomRightServo.setDirection(Servo.Direction.REVERSE);
+        topLeftServo.setDirection(Servo.Direction.REVERSE);
+        bottomLeftServo.setDirection(Servo.Direction.REVERSE);
+        topRightServo.setDirection(Servo.Direction.FORWARD);
+        bottomRightServo.setDirection(Servo.Direction.FORWARD);
+
+        frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
@@ -125,7 +132,7 @@ public class AutoV2RED_RIGHT extends LinearOpMode {
         {
             vuMark = RelicRecoveryVuMark.from(relicTemplate);
         }
-        arm.setPosition(0.5);
+        arm.setPosition(0.9);
         sleep(500);
         if (sensorColor.red() > sensorColor.blue())
         {
@@ -151,7 +158,7 @@ public class AutoV2RED_RIGHT extends LinearOpMode {
             backLeftMotor.setPower(0.2);
             backRightMotor.setPower(-0.2);
         }
-        arm.setPosition(0);
+        arm.setPosition(0.3);
         sleep(500);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
@@ -177,7 +184,9 @@ public class AutoV2RED_RIGHT extends LinearOpMode {
         backLeftMotor.setPower(0);
         backRightMotor.setPower(0);
         liftMotor.setPower(-1);
-        sleep(700);
+        sleep(600);
         liftMotor.setPower(0);
+
+        TeleOpV5.angleAdjust = -imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
     }
 }

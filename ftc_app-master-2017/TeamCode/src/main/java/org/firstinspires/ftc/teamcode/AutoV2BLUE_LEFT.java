@@ -35,6 +35,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 @Autonomous(name="AutoV2BLUE_LEFT", group="Linear Opmode")
+@Disabled
 
 public class AutoV2BLUE_LEFT extends LinearOpMode {
 
@@ -127,7 +128,7 @@ public class AutoV2BLUE_LEFT extends LinearOpMode {
         {
             vuMark = RelicRecoveryVuMark.from(relicTemplate);
         }
-        arm.setPosition(0.5);
+        arm.setPosition(0.9);
         sleep(500);
         if (sensorColor.red() < sensorColor.blue())
         {
@@ -153,7 +154,7 @@ public class AutoV2BLUE_LEFT extends LinearOpMode {
             backLeftMotor.setPower(0.2);
             backRightMotor.setPower(-0.2);
         }
-        arm.setPosition(0);
+        arm.setPosition(0.3);
         sleep(500);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
@@ -179,7 +180,9 @@ public class AutoV2BLUE_LEFT extends LinearOpMode {
         backLeftMotor.setPower(0);
         backRightMotor.setPower(0);
         liftMotor.setPower(-1);
-        sleep(700);
+        sleep(600);
         liftMotor.setPower(0);
+
+        TeleOpV5.angleAdjust = -imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
     }
 }
