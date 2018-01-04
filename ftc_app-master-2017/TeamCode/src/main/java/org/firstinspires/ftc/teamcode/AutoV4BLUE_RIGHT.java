@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import com.qualcomm.robotcore.hardware.I2cDeviceSynch;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
@@ -38,9 +39,9 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 
-@Autonomous(name="Blue left auto (v3)", group="Blue Linear Opmode")
+@Autonomous(name="Blue Right Auto (V4)", group="Blue Linear Opmode")
 
-public class AutoV3BLUE_LEFT extends LinearOpMode {
+public class AutoV4BLUE_RIGHT extends LinearOpMode {
 
     // Declare OpMode members.
     private ElapsedTime runtime = new ElapsedTime();
@@ -49,6 +50,7 @@ public class AutoV3BLUE_LEFT extends LinearOpMode {
     private DcMotor backLeftMotor = null;
     private DcMotor backRightMotor = null;
     private Servo arm = null;
+    private Servo ruler = null;
     private Servo topLeftServo = null;
     private Servo bottomLeftServo = null;
     private Servo topRightServo = null;
@@ -67,6 +69,8 @@ public class AutoV3BLUE_LEFT extends LinearOpMode {
     private Orientation angles = null;
     private double initialRoll = 0.0;
 
+    double colCount = 0;
+
     @Override
     public void runOpMode()
     {
@@ -78,6 +82,7 @@ public class AutoV3BLUE_LEFT extends LinearOpMode {
         backLeftMotor  = hardwareMap.dcMotor.get("back_left_drive");
         backRightMotor = hardwareMap.dcMotor.get("back_right_drive");
         arm = hardwareMap.servo.get("back_servo");
+        ruler = hardwareMap.servo.get("rulers");
         topLeftServo = hardwareMap.servo.get("top_left");
         bottomLeftServo = hardwareMap.servo.get("bottom_left");
         topRightServo = hardwareMap.servo.get("top_right");
@@ -102,6 +107,7 @@ public class AutoV3BLUE_LEFT extends LinearOpMode {
         backRightMotor.setDirection(DcMotor.Direction.FORWARD);// Set to FORWARD if using AndyMark motors
 
         arm.setDirection(Servo.Direction.FORWARD);
+        ruler.setDirection(Servo.Direction.REVERSE);
         liftMotor.setDirection(DcMotor.Direction.REVERSE);
         topLeftServo.setDirection(Servo.Direction.REVERSE);
         bottomLeftServo.setDirection(Servo.Direction.REVERSE);
@@ -125,11 +131,14 @@ public class AutoV3BLUE_LEFT extends LinearOpMode {
         //get initial roll
         initialRoll = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).thirdAngle;
 
+        AutonHelpers.init(frontLeftMotor, frontRightMotor, backLeftMotor, backRightMotor, imu, telemetry);
+
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
 
         arm.setPosition(0.9);
+        ruler.setPosition(0.5);
 
         bottomLeftServo.setPosition(0.15);
         bottomRightServo.setPosition(0.15);
@@ -142,17 +151,11 @@ public class AutoV3BLUE_LEFT extends LinearOpMode {
         sleep(500);
         if (sensorColor.red() < sensorColor.blue())
         {
-            frontLeftMotor.setPower(0.3);
-            frontRightMotor.setPower(-0.3);
-            backLeftMotor.setPower(0.3);
-            backRightMotor.setPower(-0.3);
+            AutonHelpers.rotateTo(0.3, -10);
         }
         else
         {
-            frontLeftMotor.setPower(-0.3);
-            frontRightMotor.setPower(0.3);
-            backLeftMotor.setPower(-0.3);
-            backRightMotor.setPower(0.3);
+            AutonHelpers.rotateTo(0.3, 10);
         }
 
         vuMark = RelicRecoveryVuMark.from(relicTemplate);
@@ -166,64 +169,99 @@ public class AutoV3BLUE_LEFT extends LinearOpMode {
                 vuMark = RelicRecoveryVuMark.from(relicTemplate);
             }
 
-            if (imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle < 0)
-            {
-                frontLeftMotor.setPower(-0.2);
-                frontRightMotor.setPower(0.2);
-                backLeftMotor.setPower(-0.2);
-                backRightMotor.setPower(0.2);
-            }
-            else
-            {
-                frontLeftMotor.setPower(0.2);
-                frontRightMotor.setPower(-0.2);
-                backLeftMotor.setPower(0.2);
-                backRightMotor.setPower(-0.2);
-            }
+            AutonHelpers.rotateTo(0.3, 0);
         }
         telemetry.addData("VuMark: ", vuMark);
         telemetry.update();
+        if (vuMark == RelicRecoveryVuMark.UNKNOWN)
+        {
+            vuMark = RelicRecoveryVuMark.CENTER;
+        }
 
-        frontLeftMotor.setPower(0.3);
-        frontRightMotor.setPower(0.3);
-        backLeftMotor.setPower(0.3);
-        backRightMotor.setPower(0.3);
+        AutonHelpers.moveLeft(0.4, 45, 0);
         sleep(100);
-
-        frontLeftMotor.setPower(-0.4);
-        frontRightMotor.setPower(0.4);
-        backLeftMotor.setPower(0.4);
-        backRightMotor.setPower(-0.4);
 
         double angleTrigger = initialRoll - 2.0;
 
         while(!isStopRequested() && imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).thirdAngle >= angleTrigger)
         {
-            driveOffPlatform();
+            AutonHelpers.moveLeft(0.3, 45, 0);
         }
 
         while(!isStopRequested() && imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).thirdAngle < angleTrigger)
         {
-            driveOffPlatform();
+            AutonHelpers.moveLeft(0.3, 45, 0);
         }
 
-        //stop for test
-        frontLeftMotor.setPower(0);
-        frontRightMotor.setPower(0);
-        backLeftMotor.setPower(0);
-        backRightMotor.setPower(0);
+        sleep(250);
 
-        frontLeftMotor.setPower(-0.3);
-        frontRightMotor.setPower(0.3);
-        backLeftMotor.setPower(-0.3);
-        backRightMotor.setPower(0.3);
-
-        double angle = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
-        while (angle <= 60 && !isStopRequested())
+        //use sensor to determine back distance
+        while(!isStopRequested() && Double.isNaN(sensorDistance.getDistance(DistanceUnit.CM)))
         {
-            telemetry.addData("Angle", angle);
-            angle = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
+            AutonHelpers.moveBack(0.2, 45, 0);
         }
+
+        AutonHelpers.stop();
+
+        sleep(100);
+
+        //scootch forward a bit
+        AutonHelpers.moveForward(0.4, 45, 0);
+        sleep(150);
+        AutonHelpers.stop();
+
+        // bad code for using the rulers, causes gear grinding
+        // //arms down
+        // ruler.setPosition(1);
+        // AutonHelpers.moveBack(0.2, 45, 0);
+        // sleep(2000);
+        // AutonHelpers.moveForward(0.2, 45, 0);
+        // sleep(100);
+        // AutonHelpers.stop();
+        // //arms up
+        // ruler.setPosition(0.5);
+        // //give some movement time
+        // sleep(100);
+
+        double lastDist = sensorDistance.getDistance(DistanceUnit.CM);
+        while(!isStopRequested())
+        {
+            double distCurr = sensorDistance.getDistance(DistanceUnit.CM);
+            if (Double.isNaN(distCurr) && !Double.isNaN(lastDist))
+            {
+                colCount++;
+                sleep(500);
+            }
+            lastDist = distCurr;
+
+
+            telemetry.addData("ColCount: ", colCount);
+            telemetry.addData("Distance: ", lastDist);
+            telemetry.update();
+
+            if (colCount == 1 && vuMark == RelicRecoveryVuMark.LEFT)
+            {
+                break;
+            }
+            else if (colCount == 2 && vuMark == RelicRecoveryVuMark.CENTER)
+            {
+                break;
+            }
+            else if (colCount == 3 && vuMark == RelicRecoveryVuMark.RIGHT)
+            {
+                break;
+            }
+
+            AutonHelpers.moveLeft(0.2, 20, 0);
+        }
+
+        //forward a smidge
+        AutonHelpers.moveForward(0.5, 45, 0);
+        sleep(500);
+
+        AutonHelpers.rotateTo(0.3, -165);
+
+        while (imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle >= -165 && !isStopRequested());
 
         scoreBlock(true);
 
@@ -240,37 +278,14 @@ public class AutoV3BLUE_LEFT extends LinearOpMode {
         TeleOpV5.angleAdjust = -imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
     }
 
-    private void driveOffPlatform()
-    {
-        telemetry.addData("Distance: ", sensorDistance.getDistance(DistanceUnit.INCH));
-        telemetry.addData("Roll: ", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).thirdAngle);
-        telemetry.update();
-
-        double frontLeftPower = -0.3;
-        double frontRightPower = 0.3;
-        double backLeftPower = 0.3;
-        double backRightPower = -0.3;
-
-        double angle = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle / 45;
-        angle = ((angle > -1) ? ((angle < 1) ? angle : 1) : -1);
-        frontLeftPower += angle;
-        backLeftPower += angle;
-        frontRightPower -= angle;
-        backRightPower -= angle;
-
-        frontLeftMotor.setPower(frontLeftPower);
-        frontRightMotor.setPower(frontRightPower);
-        backLeftMotor.setPower(backLeftPower);
-        backRightMotor.setPower(backRightPower);
-    }
-
     private void scoreBlock(boolean open)
     {
+        telemetry.addData("ColCount: ", colCount);
         telemetry.update();
-        frontLeftMotor.setPower(0.6);
-        frontRightMotor.setPower(0.5);
-        backLeftMotor.setPower(0.6);
-        backRightMotor.setPower(0.5);
+        frontLeftMotor.setPower(0.5);
+        frontRightMotor.setPower(0.6);
+        backLeftMotor.setPower(0.5);
+        backRightMotor.setPower(0.6);
         sleep(1000);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);

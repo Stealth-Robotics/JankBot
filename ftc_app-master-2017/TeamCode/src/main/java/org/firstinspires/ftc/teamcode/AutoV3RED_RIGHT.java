@@ -1,6 +1,11 @@
 package org.firstinspires.ftc.teamcode;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
+import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
+import org.firstinspires.ftc.robotcore.external.matrices.VectorF;
+import org.firstinspires.ftc.robotcore.external.navigation.VuforiaTrackableDefaultListener;
+import org.firstinspires.ftc.robotcore.external.matrices.OpenGLMatrix;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Position;
@@ -32,8 +37,8 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-@Disabled
-@Autonomous(name="AutoV3RED_RIGHT", group="Red Linear Opmode")
+
+@Autonomous(name="Red right auto (v3.5)", group="Red Linear Opmode")
 
 public class AutoV3RED_RIGHT extends LinearOpMode {
 
@@ -50,14 +55,17 @@ public class AutoV3RED_RIGHT extends LinearOpMode {
     private Servo bottomRightServo = null;
     private DcMotor liftMotor = null;
 
+    private DigitalChannel lowerLimit = null;
+
     private VuforiaLocalizer vuforia = null;
     private VuforiaTrackable relicTemplate = null;
     private RelicRecoveryVuMark vuMark = null;
 
     private ColorSensor sensorColor = null;
+    private DistanceSensor sensorDistance = null;
     private BNO055IMU imu = null;
     private Orientation angles = null;
-    private Position position = null;
+    private double initialRoll = 0.0;
 
     @Override
     public void runOpMode()
@@ -75,8 +83,10 @@ public class AutoV3RED_RIGHT extends LinearOpMode {
         bottomLeftServo = hardwareMap.servo.get("bottom_left");
         topRightServo = hardwareMap.servo.get("top_right");
         bottomRightServo = hardwareMap.servo.get("bottom_right");
+        lowerLimit = hardwareMap.digitalChannel.get("lower_limit");
         liftMotor = hardwareMap.dcMotor.get("grab_lift");
         sensorColor = hardwareMap.get(ColorSensor.class, "color_range_sensor");
+        sensorDistance = hardwareMap.get(DistanceSensor.class, "color_range_sensor3");
 
         //Getting the IMU
         BNO055IMU.Parameters parameters1 = new BNO055IMU.Parameters();
@@ -92,12 +102,17 @@ public class AutoV3RED_RIGHT extends LinearOpMode {
         backLeftMotor.setDirection(DcMotor.Direction.REVERSE); // Set to REVERSE if using AndyMark motors
         backRightMotor.setDirection(DcMotor.Direction.FORWARD);// Set to FORWARD if using AndyMark motors
 
-        arm.setDirection(Servo.Direction.REVERSE);
+        arm.setDirection(Servo.Direction.FORWARD);
         liftMotor.setDirection(DcMotor.Direction.REVERSE);
         topLeftServo.setDirection(Servo.Direction.REVERSE);
         bottomLeftServo.setDirection(Servo.Direction.REVERSE);
         topRightServo.setDirection(Servo.Direction.FORWARD);
         bottomRightServo.setDirection(Servo.Direction.FORWARD);
+
+        frontLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        backLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        frontRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         VuforiaLocalizer.Parameters parameters = new VuforiaLocalizer.Parameters(cameraMonitorViewId);
@@ -108,109 +123,171 @@ public class AutoV3RED_RIGHT extends LinearOpMode {
         relicTemplate = relicTrackables.get(0);
         relicTrackables.activate();
 
+        //get initial roll
+        initialRoll = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).thirdAngle;
+
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         runtime.reset();
+
+        arm.setPosition(0.9);
 
         bottomLeftServo.setPosition(0.15);
         bottomRightServo.setPosition(0.15);
         sleep(500);
         liftMotor.setPower(1);
-        sleep(700);
+        sleep(500);
         liftMotor.setPower(0);
 
-        arm.setPosition(0.77);
+
         sleep(500);
-        if (sensorColor.red() < sensorColor.blue())
+        if (sensorColor.red() > sensorColor.blue())
         {
-            frontLeftMotor.setPower(0.2);
-            frontRightMotor.setPower(-0.2);
-            backLeftMotor.setPower(0.2);
-            backRightMotor.setPower(-0.2);
+            frontLeftMotor.setPower(0.3);
+            frontRightMotor.setPower(-0.3);
+            backLeftMotor.setPower(0.3);
+            backRightMotor.setPower(-0.3);
         }
         else
         {
-            frontLeftMotor.setPower(-0.2);
-            frontRightMotor.setPower(0.2);
-            backLeftMotor.setPower(-0.2);
-            backRightMotor.setPower(0.2);
+            frontLeftMotor.setPower(-0.3);
+            frontRightMotor.setPower(0.3);
+            backLeftMotor.setPower(-0.3);
+            backRightMotor.setPower(0.3);
         }
+
         vuMark = RelicRecoveryVuMark.from(relicTemplate);
         sleep(300);
 
-        if (imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle < 0)
-        {
-            frontLeftMotor.setPower(-0.2);
-            frontRightMotor.setPower(0.2);
-            backLeftMotor.setPower(-0.2);
-            backRightMotor.setPower(0.2);
-        }
-        else
-        {
-            frontLeftMotor.setPower(0.2);
-            frontRightMotor.setPower(-0.2);
-            backLeftMotor.setPower(0.2);
-            backRightMotor.setPower(-0.2);
-        }
-        arm.setPosition(1);
+        arm.setPosition(0.3);
         while (Math.abs(imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle) >= 5 && !isStopRequested())
         {
             if (vuMark == RelicRecoveryVuMark.UNKNOWN)
             {
                 vuMark = RelicRecoveryVuMark.from(relicTemplate);
             }
+
+            if (imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle < 0)
+            {
+                frontLeftMotor.setPower(-0.2);
+                frontRightMotor.setPower(0.2);
+                backLeftMotor.setPower(-0.2);
+                backRightMotor.setPower(0.2);
+            }
+            else
+            {
+                frontLeftMotor.setPower(0.2);
+                frontRightMotor.setPower(-0.2);
+                backLeftMotor.setPower(0.2);
+                backRightMotor.setPower(-0.2);
+            }
         }
         telemetry.addData("VuMark: ", vuMark);
         telemetry.update();
 
-        frontLeftMotor.setPower(0.5);
-        frontRightMotor.setPower(-0.5);
-        backLeftMotor.setPower(-0.5);
-        backRightMotor.setPower(0.5);
-        sleep(1200);
-        frontLeftMotor.setPower(0.5);
-        frontRightMotor.setPower(0.5);
-        backLeftMotor.setPower(0.5);
-        backRightMotor.setPower(0.5);
+        frontLeftMotor.setPower(0.3);
+        frontRightMotor.setPower(0.3);
+        backLeftMotor.setPower(0.3);
+        backRightMotor.setPower(0.3);
+        sleep(100);
 
-        switch (vuMark)
+        frontLeftMotor.setPower(0.4);
+        frontRightMotor.setPower(-0.4);
+        backLeftMotor.setPower(-0.4);
+        backRightMotor.setPower(0.4);
+
+        double angleTrigger = initialRoll + 3.0;
+
+        while(!isStopRequested() && imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).thirdAngle <= angleTrigger)
         {
-            case LEFT:
-                sleep(100);
-            case CENTER:
-                sleep(100);
-            case RIGHT:
-                sleep(400);
-                break;
-            default:
-                sleep(500);
+            driveOffPlatform();
         }
 
-        frontLeftMotor.setPower(0.5);
-        frontRightMotor.setPower(-0.5);
-        backLeftMotor.setPower(0.5);
-        backRightMotor.setPower(-0.5);
-
-        while (!(imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle <= -95 || imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle >= -90) && !isStopRequested())
+        while(!isStopRequested() && imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).thirdAngle > angleTrigger)
         {
-            if (vuMark == RelicRecoveryVuMark.UNKNOWN)
-            {
-                vuMark = RelicRecoveryVuMark.from(relicTemplate);
-            }
+            driveOffPlatform();
         }
 
+        //stop for testing
+        frontLeftMotor.setPower(0.0);
+        frontRightMotor.setPower(0.0);
+        backLeftMotor.setPower(0.0);
+        backRightMotor.setPower(0.0);
+
+        //rotate until we are straight on
+        frontLeftMotor.setPower(0.3);
+        frontRightMotor.setPower(-0.3);
+        backLeftMotor.setPower(0.3);
+        backRightMotor.setPower(-0.3);
+
+        while (imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle >= -60 && !isStopRequested());
+
+        scoreBlock(true);
+
+        //arm down and close
+        bottomLeftServo.setPosition(0.1);
+        bottomRightServo.setPosition(0.1);
+        liftMotor.setPower(-0.3);
+        while(lowerLimit.getState());
+        liftMotor.setPower(0);
+
+        //repeat
+        scoreBlock(false);
+
+        TeleOpV5.angleAdjust = -imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
+    }
+
+    private void driveOffPlatform()
+    {
+        telemetry.addData("Distance: ", sensorDistance.getDistance(DistanceUnit.INCH));
+        telemetry.addData("Roll: ", imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).thirdAngle);
+        telemetry.update();
+
+        double frontLeftPower = 0.3;
+        double frontRightPower = -0.3;
+        double backLeftPower = -0.3;
+        double backRightPower = 0.3;
+
+        double angle = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle / 45;
+        angle = ((angle > -1) ? ((angle < 1) ? angle : 1) : -1);
+        frontLeftPower += angle;
+        backLeftPower += angle;
+        frontRightPower -= angle;
+        backRightPower -= angle;
+
+        frontLeftMotor.setPower(frontLeftPower);
+        frontRightMotor.setPower(frontRightPower);
+        backLeftMotor.setPower(backLeftPower);
+        backRightMotor.setPower(backRightPower);
+    }
+
+    private void scoreBlock(boolean open)
+    {
         frontLeftMotor.setPower(0.5);
-        frontRightMotor.setPower(0.5);
+        frontRightMotor.setPower(0.6);
         backLeftMotor.setPower(0.5);
-        backRightMotor.setPower(0.5);
-        sleep(300);
+        backRightMotor.setPower(0.6);
+        sleep(1000);
         frontLeftMotor.setPower(0);
         frontRightMotor.setPower(0);
         backLeftMotor.setPower(0);
         backRightMotor.setPower(0);
-        bottomLeftServo.setPosition(0.7);
-        bottomRightServo.setPosition(0.75);
 
-        TeleOpV5.angleAdjust = -imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES).firstAngle;
+        if(open)
+        {
+            bottomLeftServo.setPosition(0.7);
+            bottomRightServo.setPosition(0.75);
+        }
+
+        sleep(500);
+        frontLeftMotor.setPower(-0.5);
+        frontRightMotor.setPower(-0.5);
+        backLeftMotor.setPower(-0.5);
+        backRightMotor.setPower(-0.5);
+        sleep(500);
+        frontLeftMotor.setPower(0);
+        frontRightMotor.setPower(0);
+        backLeftMotor.setPower(0);
+        backRightMotor.setPower(0);
     }
 }
